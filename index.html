@@ -129,6 +129,17 @@
     .nav-chip { background: var(--card); color: var(--text); border: 1px solid var(--accent); border-radius: 20px; padding: 7px 12px; font-size: 0.85rem; font-weight: bold; cursor: pointer; }
     .nav-chip.cardio { border-color: #4ade80; }
     .nav-chip.optional { border-style: dashed; border-color: #94a3b8; color: #cbd5e1; }
+    .ss-summary { background: var(--accent-glow); border: 1px solid var(--accent); color: var(--text); border-radius: 8px; padding: 8px 10px; font-size: 0.85rem; font-weight: bold; margin: 6px 0 10px; }
+    .ss-box { border: 3px solid var(--accent); border-radius: 14px; padding: 10px 8px 6px; margin: 16px 0; background: var(--accent-glow); }
+    .ss-head { margin-bottom: 4px; }
+    .ss-big { display: inline-block; background: var(--accent); color: #0b1020; font-weight: 900; font-size: 1.1rem; padding: 4px 12px; border-radius: 8px; }
+    .ss-rule { font-size: 0.85rem; font-weight: bold; margin-top: 6px; line-height: 1.4; }
+    .ss-tag { display: inline-block; background: var(--accent); color: #0b1020; font-weight: bold; font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; margin-bottom: 4px; }
+    .ss-foot { text-align: center; font-weight: bold; font-size: 0.85rem; color: var(--accent); padding: 6px 4px 2px; }
+    .ex.in-ss { border-right: 1px solid var(--border-color); }
+    .sticky-day { position: sticky; top: 88px; z-index: 40; background: var(--accent); color: #0b1020; font-weight: 900; font-size: 0.95rem; padding: 6px 12px; border-radius: 8px; margin: 6px 0 8px; box-shadow: 0 3px 8px rgba(0,0,0,0.5); }
+    .sticky-day.cardio { background: #4ade80; }
+    .sticky-day.optional { background: #cbd5e1; }
     .phase-switch { display: flex; gap: 6px; margin-bottom: 10px; }
     .phase-btn { flex: 1; background: var(--card); color: var(--muted); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 4px; font-weight: bold; font-size: 0.88rem; cursor: pointer; }
     .phase-btn.active { background: var(--accent); color: #0b1020; border-color: var(--accent); }
@@ -265,19 +276,31 @@ P.days.forEach((d, di) => {
       el('div', { class: 'day-sub' }, d.kind === 'optional' ? el('span', { class: 'opt-chip' }, 'לא חובה') : null, d.time ? el('span', { class: 'time-chip' }, '⏱️ ' + d.time) : null),
       el('h2', null, d.title)), prog);
   card.appendChild(head);
+  body.appendChild(el('div', { class: 'sticky-day ' + (d.kind || '') }, '📅 ' + d.label + (d.kind === 'optional' ? ' (לא חובה)' : '')));
   if (d.intro) body.appendChild(el('p', { class: 'muted' }, d.intro));
   const updateProg = () => { const n = d.items.filter(i => state.t[i.id]).length; prog.textContent = n + '/' + d.items.length + ' ✓'; };
-  let prevSS = null;
+  let prevSS = null, box = null, pos = 0;
+  const ssCount = new Set(d.items.filter(i => i.superset).map(i => i.superset)).size;
+  if (ssCount) body.appendChild(el('div', { class: 'ss-summary' }, '🔗 באימון הזה ' + (ssCount === 1 ? 'סופר-סט אחד' : ssCount + ' סופר-סטים') + '. הם מסומנים במסגרת צבעונית.'));
   d.items.forEach((it, idx) => {
     const cb = el('input', { type: 'checkbox' });
     cb.checked = !!state.t[it.id];
     const ss = it.superset || null;
     const nextSS = d.items[idx + 1] && d.items[idx + 1].superset;
     const row = el('div', { class: 'ex' + (it.cardio ? ' cardio-item' : '') + (ss ? ' in-ss' : '') + (cb.checked ? ' done' : '') });
-    if (ss && ss !== prevSS) daysWrapSS(body, ss);
+    if (ss && ss !== prevSS) {
+      const n = d.items.filter(i => i.superset === ss).length;
+      box = el('div', { class: 'ss-box' },
+        el('div', { class: 'ss-head' }, el('span', { class: 'ss-big' }, '🔗 סופר-סט ' + ss),
+          el('div', { class: 'ss-rule' }, n + ' תרגילים ברצף, בלי מנוחה ביניהם. רק אחרי האחרון נחים 60–90 שנ\' וחוזרים על כל הזוג.')));
+      body.appendChild(box); pos = 0;
+    }
     prevSS = ss;
     cb.addEventListener('change', () => { state.t[it.id] = cb.checked; row.classList.toggle('done', cb.checked); updateProg(); save(); });
+    let ssTag = null;
+    if (ss) { pos++; const n = d.items.filter(i => i.superset === ss).length; ssTag = el('div', { class: 'ss-tag' }, 'סופר-סט ' + ss + ' · תרגיל ' + pos + ' מתוך ' + n + (pos < n ? ' ← מיד לתרגיל הבא' : ' ← עכשיו מנוחה')); }
     const top = el('label', { class: 'ex-top' }, cb, el('div', { class: 'ex-title' },
+      ssTag,
       el('div', { class: 'ex-name' }, it.name, it.tag ? el('span', { class: 'tag' }, it.tag) : null),
       it.en ? el('div', { class: 'ex-en' }, it.en) : null,
       el('div', { class: 'ex-sets' }, it.sets)));
@@ -291,16 +314,13 @@ P.days.forEach((d, di) => {
     }
     if (it.video) info.appendChild(el('a', { class: 'video-btn', href: 'https://www.youtube.com/watch?v=' + it.video, target: '_blank', rel: 'noopener' }, '▶ סרטון הדגמה'));
     row.appendChild(info);
-    body.appendChild(row);
-    if (ss && nextSS !== ss) body.appendChild(el('div', { class: 'ss-end' }, '↩︎ סוף סופר-סט ' + ss + ': עכשיו מנוחה של 60–90 שנ\', וחוזרים על הזוג.'));
+    (ss ? box : body).appendChild(row);
+    if (ss && nextSS !== ss) box.appendChild(el('div', { class: 'ss-foot' }, '⏸️ סוף סופר-סט ' + ss + ': מנוחה 60–90 שנ\', ואז עוד סבב של שני התרגילים'));
   });
   card.appendChild(body);
   daysWrap.appendChild(card);
   updateProg();
 });
-function daysWrapSS(body, ss) {
-  body.appendChild(el('div', { class: 'ss-start' }, '🔗 סופר-סט ' + ss + ': שני התרגילים הבאים ברצף, בלי מנוחה ביניהם'));
-}
 
 function resetWeek() {
   if (!confirm('לאפס את סימוני האימונים של השבוע?')) return;
