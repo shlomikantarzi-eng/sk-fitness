@@ -140,6 +140,10 @@
     .sticky-day { position: sticky; top: 88px; z-index: 40; background: var(--accent); color: #0b1020; font-weight: 900; font-size: 0.95rem; padding: 6px 12px; border-radius: 8px; margin: 6px 0 8px; box-shadow: 0 3px 8px rgba(0,0,0,0.5); }
     .sticky-day.cardio { background: #4ade80; }
     .sticky-day.optional { background: #cbd5e1; }
+    .focus-mini { padding: 8px 12px; }
+    .focus-mini summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; font-weight: bold; list-style: none; }
+    .focus-mini summary::-webkit-details-marker { display: none; }
+    .focus-mini details[open] summary { color: var(--accent); margin-bottom: 6px; }
     .phase-switch { display: flex; gap: 6px; margin-bottom: 10px; }
     .phase-btn { flex: 1; background: var(--card); color: var(--muted); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 4px; font-weight: bold; font-size: 0.88rem; cursor: pointer; }
     .phase-btn.active { background: var(--accent); color: #0b1020; border-color: var(--accent); }
@@ -257,9 +261,12 @@ countWeeks();
 
 /* focus */
 const fc = document.getElementById('focusCard');
-fc.appendChild(el('span', { class: 'badge' }, P.focus.badge));
-fc.appendChild(el('h2', null, P.focus.title));
-fc.appendChild(el('ul', { class: 'clean muted' }, P.focus.points.map(p => el('li', { html: p }))));
+fc.classList.add('focus-mini');
+const det = el('details', null,
+  el('summary', null, 'ℹ️ ' + P.focus.badge + ' (לחץ לפתיחה)'),
+  el('h2', null, P.focus.title),
+  el('ul', { class: 'clean muted' }, P.focus.points.map(p => el('li', { html: p }))));
+fc.appendChild(det);
 
 /* days */
 const daysWrap = document.getElementById('days');
